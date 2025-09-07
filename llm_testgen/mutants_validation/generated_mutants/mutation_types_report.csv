@@ -1,0 +1,16 @@
+mutant_file,mutation_type
+mutant_sample_number_0.py,AOD
+mutant_sample_number_1.py,AOR
+mutant_sample_number_2.py,ASR
+mutant_sample_number_3.py,BCR
+mutant_sample_number_4.py,COD
+mutant_sample_number_5.py,COI
+mutant_sample_number_6.py,COI
+mutant_sample_number_7.py,COI
+mutant_sample_number_8.py,COI
+mutant_sample_number_9.py,ROR
+mutant_sample_number_10.py,ROR
+mutant_sample_number_11.py,ROR
+mutant_sample_number_12.py,ROR
+mutant_sample_number_13.py,ROR
+mutant_sample_number_14.py,ROR

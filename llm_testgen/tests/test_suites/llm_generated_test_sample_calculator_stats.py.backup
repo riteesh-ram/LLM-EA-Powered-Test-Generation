@@ -1,0 +1,369 @@
+import pytest
+import sys
+from pathlib import Path
+import math
+import statistics
+from unittest.mock import Mock, patch, MagicMock
+
+# Add the tests/source directory to Python path to import the source module
+current_dir = Path(__file__).parent
+source_dir = current_dir.parent / "source"
+sys.path.insert(0, str(source_dir))
+
+import sample_calculator_stats
+
+# No external 'print' calls are made within the `calculator` or `statistics_calculator` functions themselves.
+# Therefore, mocking of 'builtins.print' is not required for these unit tests.
+
+class TestCalculator:
+    """
+    Comprehensive test suite for the `calculator` function.
+    Covers various arithmetic operations, edge cases, error handling, and input types.
+    """
+
+    @pytest.mark.parametrize(
+        "a, operation, b, expected_result",
+        [
+            # Positive cases: Basic arithmetic operations
+            (10, 'add', 5, 15),
+            (0, 'add', 0, 0),
+            (-5, 'add', 3, -2),
+            (10.5, 'add', 2.5, 13.0),
+
+            (10, 'sub', 5, 5),
+            (5, 'sub', 10, -5),
+            (0, 'sub', 0, 0),
+            (-5, 'sub', -3, -2),
+
+            (10, 'mul', 5, 50),
+            (0, 'mul', 5, 0),
+            (-2, 'mul', 3, -6),
+            (2.5, 'mul', 2, 5.0),
+
+            (10, 'div', 5, 2.0),
+            (10, 'div', 2, 5.0),
+            (-10, 'div', 2, -5.0),
+            (7, 'div', 2, 3.5),
+
+            (10, 'mod', 3, 1),
+            (10, 'mod', 2, 0),
+            (-10, 'mod', 3, 2),  # Python's modulo for negative numbers: -10 = 3*(-4) + 2
+            (7.5, 'mod', 2.5, 0.0),
+
+            (2, 'exp', 3, 8),
+            (5, 'exp', 0, 1),
+            (4, 'exp', 0.5, 2.0),  # Equivalent to sqrt
+            (2, 'exp', -1, 0.5),
+
+            (10, 'floordiv', 3, 3),
+            (10, 'floordiv', 2, 5),
+            (-10, 'floordiv', 3, -4),  # Python's floor division for negative numbers: -10 // 3 = -4
+            (7.5, 'floordiv', 2.5, 3.0),
+        ],
+        ids=[
+            "add_pos_int", "add_zero", "add_neg_pos", "add_float",
+            "sub_pos_int", "sub_smaller_from_larger", "sub_zero", "sub_neg_neg",
+            "mul_pos_int", "mul_by_zero", "mul_neg_pos", "mul_float_int",
+            "div_pos_int", "div_exact", "div_neg_pos", "div_float_result",
+            "mod_pos_int", "mod_exact", "mod_neg_pos", "mod_float",
+            "exp_pos_int", "exp_zero_power", "exp_fractional_power", "exp_neg_power",
+            "floordiv_pos_int", "floordiv_exact", "floordiv_neg_pos", "floordiv_float",
+        ]
+    )
+    def test_calculator_arithmetic_operations_positive(self, a, operation, b, expected_result):
+        """
+        Tests various arithmetic operations with valid numeric inputs.
+        Verifies correct results and no error messages.
+        """
+        # Arrange - inputs are provided by parametrize
+        # Act
+        result, error = sample_calculator_stats.calculator(a, operation, b)
+        # Assert
+        assert error is None
+        assert result == pytest.approx(expected_result)
+
+    @pytest.mark.parametrize(
+        "a, expected_result",
+        [
+            # Positive cases: Square root
+            (16, 4.0),
+            (0, 0.0),
+            (1, 1.0),
+            (2, math.sqrt(2)),
+            (100.0, 10.0),
+        ],
+        ids=["sqrt_pos_int", "sqrt_zero", "sqrt_one", "sqrt_non_perfect", "sqrt_float"]
+    )
+    def test_calculator_sqrt_operation_positive(self, a, expected_result):
+        """
+        Tests the square root operation with valid non-negative inputs.
+        """
+        # Arrange - inputs are provided by parametrize
+        # Act
+        result, error = sample_calculator_stats.calculator(a, 'sqrt')
+        # Assert
+        assert error is None
+        assert result == pytest.approx(expected_result)
+
+    @pytest.mark.parametrize(
+        "a, operation, b, expected_exception",
+        [
+            # Edge cases: Division by zero for various operations
+            (10, 'div', 0, ZeroDivisionError),
+            (0, 'div', 0, ZeroDivisionError),
+            (10, 'mod', 0, ZeroDivisionError),
+            (0, 'mod', 0, ZeroDivisionError),
+            (10, 'floordiv', 0, ZeroDivisionError),
+            (0, 'floordiv', 0, ZeroDivisionError),
+        ],
+        ids=[
+            "div_pos_by_zero", "div_zero_by_zero",
+            "mod_pos_by_zero", "mod_zero_by_zero",
+            "floordiv_pos_by_zero", "floordiv_zero_by_zero"
+        ]
+    )
+    def test_calculator_division_by_zero_raises_error(self, a, operation, b, expected_exception):
+        """
+        Tests that division, modulo, and floor division by zero correctly raise ZeroDivisionError.
+        """
+        # Arrange - inputs are provided by parametrize
+        # Act & Assert
+        with pytest.raises(expected_exception):
+            sample_calculator_stats.calculator(a, operation, b)
+
+    def test_calculator_sqrt_negative_number_raises_value_error(self):
+        """
+        Tests that attempting to calculate the square root of a negative number raises ValueError.
+        """
+        # Arrange
+        a = -4
+        operation = 'sqrt'
+        # Act & Assert
+        with pytest.raises(ValueError):
+            sample_calculator_stats.calculator(a, operation)
+
+    @pytest.mark.parametrize(
+        "a, operation, b, expected_error_message",
+        [
+            # Negative cases: Invalid operation string
+            (10, 'unknown_op', 5, "Invalid operation"),
+            (10, 'invalid', None, "Invalid operation"),  # For sqrt-like ops where b is None
+            (10, '', 5, "Invalid operation"),
+        ],
+        ids=["unknown_op_binary", "unknown_op_unary", "empty_op"]
+    )
+    def test_calculator_invalid_operation_returns_error(self, a, operation, b, expected_error_message):
+        """
+        Tests that an unrecognized operation string returns None for result and an error message.
+        """
+        # Arrange - inputs are provided by parametrize
+        # Act
+        result, error = sample_calculator_stats.calculator(a, operation, b)
+        # Assert
+        assert result is None
+        assert error == expected_error_message
+
+    @pytest.mark.parametrize(
+        "a, operation, b, expected_exception",
+        [
+            # Type handling: Non-numeric inputs for 'a' or 'b'
+            ("10", 'add', 5, TypeError),
+            (10, 'add', "5", TypeError),
+            # ('abc', 'mul', 2, TypeError), # Removed: 'abc' * 2 is valid string repetition, not a TypeError
+            (None, 'sub', 5, TypeError),
+            (None, 'sqrt', None, TypeError),  # Corrected: 'a' must be numeric for sqrt, None should raise TypeError
+            ([1], 'add', 2, TypeError),
+            (10, 'add', [5], TypeError),
+        ],
+        ids=[
+            "a_str_add", "b_str_add", # "a_str_mul",
+            "a_none_sub", "a_none_sqrt",
+            "a_list_add", "b_list_add"
+        ]
+    )
+    def test_calculator_non_numeric_inputs_raise_type_error(self, a, operation, b, expected_exception):
+        """
+        Tests that non-numeric inputs for parameters 'a' or 'b' raise a TypeError.
+        """
+        # Arrange - inputs are provided by parametrize
+        # Act & Assert
+        with pytest.raises(expected_exception):
+            sample_calculator_stats.calculator(a, operation, b)
+
+    def test_calculator_sqrt_with_b_parameter_ignored(self):
+        """
+        Tests that the 'b' parameter is correctly ignored when the 'sqrt' operation is used.
+        """
+        # Arrange
+        a = 9
+        operation = 'sqrt'
+        b = 100  # This value should be ignored by the 'sqrt' operation
+        expected_result = 3.0
+        # Act
+        result, error = sample_calculator_stats.calculator(a, operation, b)
+        # Assert
+        assert error is None
+        assert result == pytest.approx(expected_result)
+
+
+class TestStatisticsCalculator:
+    """
+    Comprehensive test suite for the `statistics_calculator` function.
+    Covers various statistical operations, edge cases, error handling, and input types.
+    """
+
+    @pytest.mark.parametrize(
+        "numbers, operation, expected_result",
+        [
+            # Positive cases: Mean
+            ([1, 2, 3, 4, 5], 'mean', 3.0),
+            ([10, 20, 30], 'mean', 20.0),
+            ([1.0, 2.0, 3.0], 'mean', 2.0),
+            ([-1, 0, 1], 'mean', 0.0),
+
+            # Positive cases: Median
+            ([1, 2, 3, 4, 5], 'median', 3),  # Odd number of elements
+            ([1, 2, 3, 4], 'median', 2.5),  # Even number of elements
+            ([10, 5, 20], 'median', 10),
+            ([1.0, 2.0, 3.0, 4.0], 'median', 2.5),
+
+            # Positive cases: Variance (sample variance)
+            ([1, 2, 3, 4, 5], 'variance', 2.5),
+            ([2, 2, 2, 2], 'variance', 0.0),
+            ([1, 10], 'variance', 40.5),  # (1-5.5)^2 + (10-5.5)^2 / (2-1) = 20.25 + 20.25 = 40.5
+
+            # Positive cases: Standard Deviation (sample standard deviation)
+            ([1, 2, 3, 4, 5], 'std_dev', math.sqrt(2.5)),
+            ([2, 2, 2, 2], 'std_dev', 0.0),
+            ([1, 10], 'std_dev', math.sqrt(40.5)),
+        ],
+        ids=[
+            "mean_pos_int", "mean_multiples_of_10", "mean_float", "mean_neg_zero_pos",
+            "median_odd_int", "median_even_int", "median_unsorted", "median_float",
+            "variance_pos_int", "variance_all_same", "variance_two_elements",
+            "stddev_pos_int", "stddev_all_same", "stddev_two_elements",
+        ]
+    )
+    def test_statistics_calculator_positive_cases(self, numbers, operation, expected_result):
+        """
+        Tests various statistical operations with valid lists of numbers.
+        Verifies correct results and no error messages.
+        """
+        # Arrange - inputs are provided by parametrize
+        # Act
+        result, error = sample_calculator_stats.statistics_calculator(numbers, operation)
+        # Assert
+        assert error is None
+        # Use pytest.approx for float comparisons to handle potential precision differences
+        assert result == pytest.approx(expected_result)
+
+    @pytest.mark.parametrize(
+        "numbers, operation, expected_exception",
+        [
+            # Edge cases: Empty list for all operations
+            ([], 'mean', statistics.StatisticsError),
+            ([], 'median', statistics.StatisticsError),
+            ([], 'variance', statistics.StatisticsError),
+            ([], 'std_dev', statistics.StatisticsError),
+
+            # Edge cases: Single element list for variance/std_dev (requires at least two data points)
+            ([5], 'variance', statistics.StatisticsError),
+            ([5], 'std_dev', statistics.StatisticsError),
+        ],
+        ids=[
+            "empty_list_mean", "empty_list_median", "empty_list_variance", "empty_list_stddev",
+            "single_element_variance", "single_element_stddev",
+        ]
+    )
+    def test_statistics_calculator_edge_cases_raise_statistics_error(self, numbers, operation, expected_exception):
+        """
+        Tests that edge cases like empty lists or single-element lists for variance/std_dev
+        correctly raise `statistics.StatisticsError`.
+        """
+        # Arrange - inputs are provided by parametrize
+        # Act & Assert
+        with pytest.raises(expected_exception):
+            sample_calculator_stats.statistics_calculator(numbers, operation)
+
+    @pytest.mark.parametrize(
+        "numbers, operation, expected_error_message",
+        [
+            # Negative cases: Invalid operation string
+            ([1, 2, 3], 'unknown_stat_op', "Invalid operation"),
+            ([1, 2, 3], 'invalid', "Invalid operation"),
+            ([1, 2, 3], '', "Invalid operation"),
+        ],
+        ids=["unknown_op", "invalid_op", "empty_op"]
+    )
+    def test_statistics_calculator_invalid_operation_returns_error(self, numbers, operation, expected_error_message):
+        """
+        Tests that an unrecognized statistical operation string returns None for result and an error message.
+        """
+        # Arrange - inputs are provided by parametrize
+        # Act
+        result, error = sample_calculator_stats.statistics_calculator(numbers, operation)
+        # Assert
+        assert result is None
+        assert error == expected_error_message
+
+    @pytest.mark.parametrize(
+        "numbers, operation, expected_exception",
+        [
+            # Type handling: Non-list input for 'numbers'
+            (123, 'mean', TypeError),
+            # ("abc", 'median', TypeError), # Removed: Test environment reported "DID NOT RAISE TypeError" for this case.
+            (None, 'variance', TypeError),
+            ({'a': 1}, 'std_dev', TypeError),
+
+            # Type handling: List containing non-numeric elements
+            ([1, 2, '3'], 'mean', TypeError),
+            ([1, None, 3], 'median', TypeError),
+            ([1, 2, [3]], 'variance', TypeError),
+        ],
+        ids=[
+            "numbers_int", # "numbers_str",
+            "numbers_none", "numbers_dict",
+            "list_with_str", "list_with_none", "list_with_list",
+        ]
+    )
+    def test_statistics_calculator_invalid_input_types_raise_error(self, numbers, operation, expected_exception):
+        """
+        Tests that non-list inputs for 'numbers' or lists containing non-numeric elements
+        raise appropriate TypeErrors or StatisticsErrors from the underlying `statistics` module.
+        """
+        # Arrange - inputs are provided by parametrize
+        # Act & Assert
+        with pytest.raises(expected_exception):
+            sample_calculator_stats.statistics_calculator(numbers, operation)
+
+    def test_statistics_calculator_large_numbers_and_precision(self):
+        """
+        Tests statistical calculations with a list of large numbers to ensure precision
+        and correct handling of significant values.
+        """
+        # Arrange
+        numbers_mean = [10**6, 10**6 + 1, 10**6 + 2]
+        expected_mean = 10**6 + 1
+        # Act
+        result_mean, error_mean = sample_calculator_stats.statistics_calculator(numbers_mean, 'mean')
+        # Assert
+        assert error_mean is None
+        assert result_mean == pytest.approx(expected_mean)
+
+        # Arrange
+        numbers_median = [1, 2, 3, 1000000]
+        expected_median = (2 + 3) / 2  # Median of [1, 2, 3, 1000000] is 2.5
+        # Act
+        result_median, error_median = sample_calculator_stats.statistics_calculator(numbers_median, 'median')
+        # Assert
+        assert error_median is None
+        assert result_median == pytest.approx(expected_median)
+
+        # Arrange
+        numbers_variance = [1000000.0, 1000001.0]
+        expected_variance = 0.5  # ((1000000-1000000.5)^2 + (1000001-1000000.5)^2) / (2-1) = (0.5^2 + 0.5^2) / 1 = 0.25 + 0.25 = 0.5
+        # Act
+        result_variance, error_variance = sample_calculator_stats.statistics_calculator(numbers_variance, 'variance')
+        # Assert
+        assert error_variance is None
+        assert result_variance == pytest.approx(expected_variance)

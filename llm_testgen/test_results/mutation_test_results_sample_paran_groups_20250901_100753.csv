@@ -1,0 +1,10 @@
+file_name,file_type,status,num_tests,num_pass,num_fail,execution_time,error_msg
+original_sample_paran_groups.py,original,PASS,30,30,0,0.50s,
+mutant_sample_paran_groups_0.py,mutant,FAIL,30,10,20,0.52s,
+mutant_sample_paran_groups_1.py,mutant,FAIL,30,10,20,0.47s,
+mutant_sample_paran_groups_2.py,mutant,FAIL,30,10,20,0.45s,
+mutant_sample_paran_groups_3.py,mutant,FAIL,30,10,20,0.45s,
+mutant_sample_paran_groups_4.py,mutant,TIMEOUT,0,0,1,30.0s,Timeout
+mutant_sample_paran_groups_5.py,mutant,FAIL,30,10,20,0.53s,
+mutant_sample_paran_groups_6.py,mutant,FAIL,30,10,20,0.46s,
+mutant_sample_paran_groups_7.py,mutant,TIMEOUT,0,0,1,30.0s,Timeout

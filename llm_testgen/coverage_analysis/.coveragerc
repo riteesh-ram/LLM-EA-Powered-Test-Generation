@@ -1,0 +1,49 @@
+[run]
+# Source code directory
+source = tests/source
+
+# Include only source files
+include = */tests/source/*
+
+# Exclude test files, virtual environments, and cache
+omit = 
+    */venv/*
+    */env/*
+    */__pycache__/*
+    */test_*
+    */tests/test_suites/*
+    */coverage_analysis/*
+
+# Enable branch coverage
+branch = True
+
+[report]
+# Exclude lines from coverage
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if self.debug:
+    if settings.DEBUG
+    raise AssertionError
+    raise NotImplementedError
+    if 0:
+    if __name__ == .__main__.:
+    class .*\bProtocol\):
+    @(abc\.)?abstractmethod
+
+# Show missing lines
+show_missing = True
+
+# Skip files with 100% coverage in some reports
+skip_covered = False
+
+# Precision for coverage percentages
+precision = 1
+
+[html]
+# HTML report directory
+directory = coverage_analysis/reports/htmlcov
+
+# HTML report options
+show_contexts = True
+skip_covered = False

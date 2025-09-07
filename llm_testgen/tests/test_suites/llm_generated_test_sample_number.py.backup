@@ -1,0 +1,219 @@
+import pytest
+import sys
+from pathlib import Path
+from unittest.mock import MagicMock
+
+# Add the tests/source directory to Python path to import the source module
+current_dir = Path(__file__).parent
+source_dir = current_dir.parent / "source"
+sys.path.insert(0, str(source_dir))
+
+import sample_number
+
+@pytest.fixture
+def mock_print(monkeypatch):
+    """
+    Fixture to mock builtins.print and return a MagicMock instance.
+    This allows capturing all calls to print for assertion.
+    """
+    mock = MagicMock()
+    monkeypatch.setattr('builtins.print', mock)
+    return mock
+
+def test_classify_numbers_empty_list(mock_print):
+    """
+    Test classify_numbers with an empty list.
+    Verifies that the correct "Empty list provided." message is printed and no other actions occur.
+    """
+    # Arrange
+    nums = []
+
+    # Act
+    sample_number.classify_numbers(nums)
+
+    # Assert
+    mock_print.assert_called_once_with("Empty list provided.")
+    assert mock_print.call_count == 1
+
+def test_classify_numbers_only_zeros(mock_print):
+    """
+    Test classify_numbers with a list containing only zeros.
+    Verifies correct messages for zero handling and the final sum.
+    """
+    # Arrange
+    nums = [0, 0]
+
+    # Act
+    sample_number.classify_numbers(nums)
+
+    # Assert
+    expected_calls = [
+        ("Zero encountered – adding nothing.",),
+        ("Value 0: do nothing",),
+        ("Zero encountered – adding nothing.",),
+        ("Value 0: do nothing",),
+        ("Sum of positive numbers: 0",)
+    ]
+    assert mock_print.call_count == len(expected_calls)
+    for i, call_args in enumerate(expected_calls):
+        assert mock_print.call_args_list[i].args == call_args
+
+def test_classify_numbers_only_negatives(mock_print):
+    """
+    Test classify_numbers with a list containing only negative numbers.
+    Verifies that negative numbers are skipped and the final sum is zero.
+    """
+    # Arrange
+    nums = [-1, -5, -10]
+
+    # Act
+    sample_number.classify_numbers(nums)
+
+    # Assert
+    expected_calls = [
+        ("Skipping negative value -1",),
+        ("Skipping negative value -5",),
+        ("Skipping negative value -10",),
+        ("Sum of positive numbers: 0",)
+    ]
+    assert mock_print.call_count == len(expected_calls)
+    for i, call_args in enumerate(expected_calls):
+        assert mock_print.call_args_list[i].args == call_args
+
+@pytest.mark.parametrize(
+    "nums, expected_prints, expected_total_sum",
+    [
+        # Scenario 1: Mixed list with all classifications, negatives, and zeros (similar to example)
+        ([0, 1, -3, 4, 7, 2, 9],
+         [
+             ("Zero encountered – adding nothing.",),
+             ("Value 0: do nothing",),
+             ("Value 1: light work",),
+             ("Skipping negative value -3",),
+             ("Value 4: moderate work",),
+             ("Value 7: heavy lifting",),
+             ("Value 2: light work",),
+             ("Value 9: heavy lifting",),
+             ("Sum of positive numbers: 23",)
+         ], 23),
+        # Scenario 2: Only 'light work' numbers, covering a specific match-case branch
+        ([1, 2, 3],
+         [
+             ("Value 1: light work",),
+             ("Value 2: light work",),
+             ("Value 3: light work",),
+             ("Sum of positive numbers: 6",)
+         ], 6),
+        # Scenario 3: Only 'moderate work' numbers, covering another specific match-case branch
+        ([4, 5, 6],
+         [
+             ("Value 4: moderate work",),
+             ("Value 5: moderate work",),
+             ("Value 6: moderate work",),
+             ("Sum of positive numbers: 15",)
+         ], 15),
+        # Scenario 4: Only 'heavy lifting' numbers, covering the 'if n > 6' match-case branch
+        ([7, 8, 100],
+         [
+             ("Value 7: heavy lifting",),
+             ("Value 8: heavy lifting",),
+             ("Value 100: heavy lifting",),
+             ("Sum of positive numbers: 115",)
+         ], 115),
+        # Scenario 5: Single positive number, an edge case for loop iteration
+        ([5],
+         [
+             ("Value 5: moderate work",),
+             ("Sum of positive numbers: 5",)
+         ], 5),
+    ],
+    ids=[
+        "mixed_list_all_classifications",
+        "only_light_work_numbers",
+        "only_moderate_work_numbers",
+        "only_heavy_lifting_numbers",
+        "single_positive_number"
+    ]
+)
+def test_classify_numbers_various_inputs(mock_print, nums, expected_prints, expected_total_sum):
+    """
+    Test classify_numbers with various combinations of positive, negative, and zero numbers,
+    covering all classification branches and sum calculation.
+    """
+    # Arrange - inputs are provided by parametrize
+
+    # Act
+    sample_number.classify_numbers(nums)
+
+    # Assert
+    assert mock_print.call_count == len(expected_prints)
+    for i, call_args in enumerate(expected_prints):
+        assert mock_print.call_args_list[i].args == call_args
+
+    # Verify the final sum print specifically
+    final_sum_call_message = mock_print.call_args_list[-1].args[0]
+    assert f"Sum of positive numbers: {expected_total_sum}" == final_sum_call_message
+
+def test_classify_numbers_none_input(mock_print):
+    """
+    Test classify_numbers with None as input.
+    The function's logic handles `if not nums:` which evaluates to True for None,
+    so it should print "Empty list provided." and return, not raise TypeError.
+    """
+    # Arrange
+    nums = None
+
+    # Act
+    sample_number.classify_numbers(nums)
+
+    # Assert
+    mock_print.assert_called_once_with("Empty list provided.")
+    assert mock_print.call_count == 1
+
+def test_classify_numbers_list_with_non_numeric_elements(mock_print):
+    """
+    Test classify_numbers with a list containing non-integer elements (e.g., strings).
+    Should raise a TypeError during numeric comparison (n < 0).
+    """
+    # Arrange
+    nums = [1, "a", 3]
+
+    # Act & Assert
+    with pytest.raises(TypeError) as excinfo:
+        sample_number.classify_numbers(nums)
+    assert "not supported between instances of 'str' and 'int'" in str(excinfo.value)
+    # Verify that prints up to the error point are correct
+    expected_calls_before_error = [
+        ("Value 1: light work",),
+    ]
+    assert mock_print.call_count == len(expected_calls_before_error)
+    for i, call_args in enumerate(expected_calls_before_error):
+        assert mock_print.call_args_list[i].args == call_args
+
+def test_classify_numbers_list_with_floats(mock_print):
+    """
+    Test classify_numbers with a list containing float numbers.
+    Verifies how floats are handled by the classification logic and sum calculation.
+    - Floats matching integer values (e.g., 5.0) should match integer cases.
+    - Floats not matching integer values (e.g., 1.5) should fall to 'undefined' or 'heavy lifting' if > 6.
+    - Negative floats should be skipped.
+    """
+    # Arrange
+    nums = [1.5, 5.0, 7.1, -2.5, 0.0]
+
+    # Act
+    sample_number.classify_numbers(nums)
+
+    # Assert
+    expected_calls = [
+        ("Value 1.5: undefined",), # 1.5 doesn't match 0, 1|2|3, 4|5|6, and is not > 6
+        ("Value 5.0: moderate work",), # 5.0 matches 4|5|6
+        ("Value 7.1: heavy lifting",), # 7.1 matches _ if n > 6
+        ("Skipping negative value -2.5",),
+        ("Zero encountered – adding nothing.",), # 0.0 matches 0
+        ("Value 0.0: do nothing",),
+        ("Sum of positive numbers: 13.6",) # 1.5 + 5.0 + 7.1 + 0.0 = 13.6
+    ]
+    assert mock_print.call_count == len(expected_calls)
+    for i, call_args in enumerate(expected_calls):
+        assert mock_print.call_args_list[i].args == call_args

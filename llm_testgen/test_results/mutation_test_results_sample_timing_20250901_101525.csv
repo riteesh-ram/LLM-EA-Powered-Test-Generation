@@ -1,0 +1,6 @@
+file_name,file_type,status,num_tests,num_pass,num_fail,execution_time,error_msg
+original_sample_timing.py,original,PASS,7,7,0,0.48s,
+mutant_sample_timing_0.py,mutant,FAIL,7,0,7,0.54s,
+mutant_sample_timing_1.py,mutant,FAIL,7,1,6,0.58s,
+mutant_sample_timing_2.py,mutant,PASS,7,7,0,0.44s,
+mutant_sample_timing_3.py,mutant,FAIL,0,0,0,0.47s,

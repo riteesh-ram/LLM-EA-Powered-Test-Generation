@@ -1,0 +1,187 @@
+import pytest
+import sys
+from pathlib import Path
+from unittest.mock import Mock, patch, MagicMock
+
+# Add the tests/source directory to Python path to import the source module
+current_dir = Path(__file__).parent
+source_dir = current_dir.parent / "source"
+sys.path.insert(0, str(source_dir))
+
+import sample_utility
+
+class TestCalculateFibonacci:
+    """
+    Comprehensive test suite for the calculate_fibonacci function.
+    """
+
+    @pytest.mark.parametrize(
+        "n, expected_sequence",
+        [
+            (1, [0]),
+            (2, [0, 1]),
+            (3, [0, 1, 1]),
+            (5, [0, 1, 1, 2, 3]),
+            (10, [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]),
+        ],
+        ids=[f"n={n}" for n, _ in [(1, [0]), (2, [0, 1]), (3, [0, 1, 1]), (5, [0, 1, 1, 2, 3]), (10, [0, 1, 1, 2, 3, 5, 8, 13, 21, 34])]]
+    )
+    def test_positive_integer_inputs(self, n, expected_sequence):
+        """
+        Test calculate_fibonacci with valid positive integer inputs.
+        Verifies the correctness of the generated Fibonacci sequence.
+        """
+        # Arrange - inputs are provided by parametrize
+        # Act
+        result = sample_utility.calculate_fibonacci(n)
+        # Assert
+        assert result == expected_sequence
+
+    @pytest.mark.parametrize(
+        "n_invalid, expected_error_message",
+        [
+            (0, "Error: Input must be a positive integer."),
+            (-5, "Error: Input must be a positive integer."),
+            (1.5, "Error: Input must be a positive integer."),
+            ("abc", "Error: Input must be a positive integer."),
+            (None, "Error: Input must be a positive integer."),
+        ],
+        ids=["n=0", "n=-5", "n=1.5_float", "n=string", "n=None"]
+    )
+    def test_invalid_inputs_returns_empty_list_and_prints_error(self, n_invalid, expected_error_message, monkeypatch):
+        """
+        Test calculate_fibonacci with invalid inputs (non-positive integers, wrong types).
+        Verifies that an empty list is returned and an error message is printed.
+        """
+        # Arrange
+        mock_print = Mock()
+        monkeypatch.setattr('builtins.print', mock_print)
+
+        # Act
+        result = sample_utility.calculate_fibonacci(n_invalid)
+
+        # Assert
+        assert result == []
+        mock_print.assert_called_once_with(expected_error_message)
+
+class TestCalculateTriangleArea:
+    """
+    Comprehensive test suite for the calculate_triangle_area function.
+    """
+
+    @pytest.mark.parametrize(
+        "base, height, expected_area",
+        [
+            (10, 5, 25.0),
+            (7.5, 4, 15.0),
+            (0.1, 0.1, 0.005), # This case caused the floating point error
+            (1, 1, 0.5),
+            (100, 200, 10000.0),
+        ],
+        ids=["int_base_height", "float_base_int_height", "small_float", "unit_values", "large_values"]
+    )
+    def test_positive_numeric_inputs(self, base, height, expected_area):
+        """
+        Test calculate_triangle_area with valid positive numeric inputs (int and float).
+        Verifies the correct area calculation, handling floating point precision.
+        """
+        # Arrange - inputs are provided by parametrize
+        # Act
+        result = sample_utility.calculate_triangle_area(base, height)
+        # Assert
+        # Use pytest.approx for floating-point comparisons to avoid precision issues
+        assert result == pytest.approx(expected_area)
+
+    @pytest.mark.parametrize(
+        "base, height, expected_error_message",
+        [
+            (0, 5, "Error: Base and height must be positive values."),
+            (10, 0, "Error: Base and height must be positive values."),
+            (-5, 10, "Error: Base and height must be positive values."),
+            (10, -5, "Error: Base and height must be positive values."),
+            (0, 0, "Error: Base and height must be positive values."),
+            (-1, -1, "Error: Base and height must be positive values."),
+        ],
+        ids=["base=0", "height=0", "base_negative", "height_negative", "both_zero", "both_negative"]
+    )
+    def test_non_positive_numeric_inputs_returns_none_and_prints_error(self, base, height, expected_error_message, monkeypatch):
+        """
+        Test calculate_triangle_area with non-positive numeric inputs.
+        Verifies that None is returned and an error message is printed.
+        """
+        # Arrange
+        mock_print = Mock()
+        monkeypatch.setattr('builtins.print', mock_print)
+
+        # Act
+        result = sample_utility.calculate_triangle_area(base, height)
+
+        # Assert
+        assert result is None
+        mock_print.assert_called_once_with(expected_error_message)
+
+    @pytest.mark.parametrize(
+        "base, height, expected_error_message",
+        [
+            ("a", 10, "Error: Base and height must be numbers."),
+            (10, "b", "Error: Base and height must be numbers."),
+            (None, 10, "Error: Base and height must be numbers."),
+            (10, None, "Error: Base and height must be numbers."),
+            ([1], 10, "Error: Base and height must be numbers."),
+            (10, {"h": 10}, "Error: Base and height must be numbers."),
+        ],
+        ids=["base_string", "height_string", "base_None", "height_None", "base_list", "height_dict"]
+    )
+    def test_non_numeric_inputs_returns_none_and_prints_error(self, base, height, expected_error_message, monkeypatch):
+        """
+        Test calculate_triangle_area with non-numeric inputs.
+        Verifies that None is returned and an error message is printed.
+        """
+        # Arrange
+        mock_print = Mock()
+        monkeypatch.setattr('builtins.print', mock_print)
+
+        # Act
+        result = sample_utility.calculate_triangle_area(base, height)
+
+        # Assert
+        assert result is None
+        mock_print.assert_called_once_with(expected_error_message)
+
+    def test_mixed_valid_and_invalid_types(self, monkeypatch):
+        """
+        Test calculate_triangle_area with one valid and one invalid type.
+        Ensures the type check correctly identifies the non-numeric input.
+        """
+        # Arrange
+        mock_print = Mock()
+        monkeypatch.setattr('builtins.print', mock_print)
+        base = 5
+        height = "invalid"
+        expected_error_message = "Error: Base and height must be numbers."
+
+        # Act
+        result = sample_utility.calculate_triangle_area(base, height)
+
+        # Assert
+        assert result is None
+        mock_print.assert_called_once_with(expected_error_message)
+
+    def test_mixed_valid_type_and_non_positive_value(self, monkeypatch):
+        """
+        Test calculate_triangle_area with one valid type/value and one non-positive value.
+        Ensures the positive value check correctly identifies the issue.
+        """
+        # Arrange
+        mock_print = Mock()
+        monkeypatch.setattr('builtins.print', mock_print)
+        base = 5
+        height = -10
+        expected_error_message = "Error: Base and height must be positive values."
+
+        # Act
+        result = sample_utility.calculate_triangle_area(base, height)
+
+        # Assert
+        assert result is None
+        mock_print.assert_called_once_with(expected_error_message)

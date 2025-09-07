@@ -1,0 +1,6 @@
+#!/Users/riteeshram/Documents/Code Base/aster/llm_testgen/pynguin-main/my_pynguin_venv/bin/python
+import sys
+from pynguin.cli import main
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -1,0 +1,30 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+
+# Pytest cache
+.pytest_cache/
+.cache/
+
+# Test and temporary directories
+temp_test_dir/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+pipeline_logs/
+
+# Environment variables
+.env.local
